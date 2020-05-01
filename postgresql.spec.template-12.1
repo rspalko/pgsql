@@ -1,0 +1,37 @@
+Summary:Postgresql Spec file
+Name:postgresql-postgis
+Version:12.1_3.0.0
+Release:1
+License:PostgreSQL
+Group:Application/System
+
+%description
+Postgresql 12.1, PostGis 3.0.0
+
+%pre
+%post
+umask 0022
+cp /usr/local/pgsql/bin/linux /etc/init.d/postgresql
+chmod 755 /etc/init.d/postgresql
+chkconfig --add postgresql
+chkconfig postgresqsl on
+echo export PG_HOME=/usr/local/pgsql > /etc/profile.d/pgsql.sh
+echo export PATH=\$PG_HOME/bin:\$PATH >> /etc/profile.d/pgsql.sh
+echo export LD_LIBRARY_PATH=\$PG_HOME/lib >> /etc/profile.d/pgsql.sh
+echo export MANPATH=\$PG_HOME/share/man:\$MANPATH >> /etc/profile.d/pgsql.sh
+#unlink /usr/local/pgsql/bin/wx-config
+source /etc/profile.d/pgsql.sh
+exit 0
+
+%preun
+service postgresql stop
+exit 0
+
+%postun
+chkconfig -del postgresql
+rm -f /etc/init.d/postgresql
+rm -f /etc/profile.d/pgsql.sh
+rm -rf /usr/local/pgsql
+exit 0
+
+%files
