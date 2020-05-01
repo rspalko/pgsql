@@ -244,7 +244,7 @@ chmod 644 "${BUILD_DIR}/install/share/doc/${POSTGIS_PDF}"
 cp "${BUILD_DIR}/${POSTGRES_DIR}/contrib/start-scripts/linux" "${BUILD_DIR}/install/bin"
 sed -i "s/^PGDATA=.*$/PGDATA=\/opt\/pgsql\/pgdata/" "${BUILD_DIR}/install/bin/linux"
 sed -i "s/su -/su/g" "${BUILD_DIR}/install/bin/linux"
-sed -i "s/^PGDATA=/a export LD_LIBRARY_PATH=/usr/local/pgsql/lib" "${BUILD_DIR}/install/bin/linux"
+sed -i "/^PGDATA=/a export LD_LIBRARY_PATH=/usr/local/pgsql/lib" "${BUILD_DIR}/install/bin/linux"
 #cp linux install/bin
 cp ${POSTGIS_DIR}/liblwgeom/.libs/liblwgeom* "${BUILD_DIR}/install/lib"
 cp $SWD/postgresql.spec.template-${PGVERSION} postgresql.spec
