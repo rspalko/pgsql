@@ -65,6 +65,7 @@ testFile()
 }
 
 # Need to get basename in case we have URL or absolute path
+CMAKE_FILE=`basename $CMAKE`
 GEOS_FILE=`basename $GEOS`
 GDAL_FILE=`basename $GDAL`
 PROJ_FILE=`basename $PROJ`
@@ -72,6 +73,9 @@ POSTGIS_FILE=`basename $POSTGIS`
 POSTGRES_FILE=`basename $POSTGRES`
 SQLITE3_FILE=`basename $SQLITE3`
 
+if [ ! -e $CMAKE_FILE ]; then
+        wget $CMAKE
+fi
 if [ ! -e $GEOS_FILE ]; then
 	wget $GEOS
 fi
@@ -95,6 +99,7 @@ fi
 #PGDADMIN_FILE=`basename $PGADMIN`
 #WIDGETS_FILE=`basename $WIDGETS`
 
+CMAKE_DIR=$(extractBase $CMAKE_FILE)
 GEOS_DIR=$(extractBase $GEOS_FILE)
 GDAL_DIR=$(extractBase $GDAL_FILE)
 PROJ_DIR=$(extractBase $PROJ_FILE)
@@ -127,6 +132,11 @@ mkdir "${BUILD_DIR}"
 set -e
 touch "${BUILD_DIR}/${MARKER}"
 
+export DEV_INSTALL_LOCATION=$PWD/build/devinstall
+export LD_LIBRARY_PATH=$DEV_INSTALL_LOCATION/lib64:$DEV_INSTALL_LOCATION/lib:${BUILD_DIR}/install/lib64:${BUILD_DIR}/install/lib:$LD_LIBRARY_PATH
+export PATH=$DEV_INSTALL_LOCATION/bin:${BUILD_DIR}/install/bin:$PATH
+
+
 #dependencies=($GEOS $GDAL $PROJ $POSTGIS $POSTGRES $PGADMIN $WIDGETS $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
 dependencies=($GEOS_FILE $GDAL_FILE $SQLITE3_FILE $PROJ_FILE $POSTGIS_FILE $POSTGRES_FILE $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
 numdeps=${#dependencies[@]}
@@ -140,7 +150,7 @@ for ((i;i<$numdeps;i++)); do
 	retrieveDependency ${dependencies[$i]} "${BUILD_DIR}"
 done
 
-cd "${BUILD_DIR}"
+#cd "${BUILD_DIR}"
 
 buildTarget()
 {
@@ -149,6 +159,11 @@ buildTarget()
 	$EXTRACTCOMMAND $1
 	cd $2
 	case $2 in
+                ($CMAKE_DIR)
+			./configure --prefix="${DEV_INSTALL_LOCATION}"
+			make -j $(nproc)
+                        make install
+                        ;;
 		($GDAL_DIR)
 			echo "GDAL BUILD"
 			./configure --prefix="${BUILD_DIR}/install" --with-proj="${BUILD_DIR}/install" --with-geos="${BUILD_DIR}/install/bin/geos-config"
@@ -211,6 +226,8 @@ buildTarget()
 			cmake -DSQLITE3_INCLUDE_DIR="${BUILD_DIR}/install/include" -DSQLITE3_LIBRARY="${BUILD_DIR}/install/lib/libsqlite3.so" -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install" ..
                         make -j $(nproc)
                         make install
+			# Workaround for GDAL not finding in lib64 on some platforms
+			cp -P ${BUILD_DIR}/install/lib64/libproj.so* ${BUILD_DIR}/install/lib
 			cd ..
                         ;;
 		(*)
@@ -222,6 +239,7 @@ buildTarget()
 	cd ..
 }
 
+buildTarget $CMAKE_FILE $CMAKE_DIR
 buildTarget $SQLITE3_FILE $SQLITE3_DIR
 buildTarget $PROJ_FILE $PROJ_DIR
 buildTarget $GEOS_FILE $GEOS_DIR
