@@ -7,7 +7,7 @@
 # Exit on error
 set -e
 
-PGVERSION=12.1
+PGVERSION=12.3
 
 source locations.sh
 
