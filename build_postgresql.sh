@@ -7,7 +7,7 @@
 # Exit on error
 set -e
 
-PGVERSION=12.3
+PGVERSION=12.6
 
 source locations.sh
 
@@ -72,6 +72,7 @@ PROJ_FILE=`basename $PROJ`
 POSTGIS_FILE=`basename $POSTGIS`
 POSTGRES_FILE=`basename $POSTGRES`
 SQLITE3_FILE=`basename $SQLITE3`
+PGAUDIT_FILE=pgaudit-`basename $PGAUDIT`
 
 if [ ! -e $CMAKE_FILE ]; then
         wget $CMAKE
@@ -94,6 +95,9 @@ fi
 if [ ! -e $SQLITE3_FILE ]; then
         wget $SQLITE3
 fi
+if [ ! -e $PGAUDIT_FILE ]; then
+        wget -O $PGAUDIT_FILE $PGAUDIT
+fi
 
 
 #PGDADMIN_FILE=`basename $PGADMIN`
@@ -106,6 +110,7 @@ PROJ_DIR=$(extractBase $PROJ_FILE)
 POSTGIS_DIR=$(extractBase $POSTGIS_FILE)
 POSTGRES_DIR=$(extractBase $POSTGRES_FILE)
 SQLITE3_DIR=$(extractBase $SQLITE3_FILE)
+PGAUDIT_DIR=$(extractBase $PGAUDIT_FILE)
 #PGADMIN_DIR=$(extractBase $PGADMIN_FILE)
 #WIDGETS_DIR=$(extractBase $WIDGETS_FILE)
 
@@ -128,7 +133,7 @@ if [ -d "${BUILD_DIR}" ]; then
 	fi
 fi
 set +e
-mkdir "${BUILD_DIR}"
+mkdir -p "${BUILD_DIR}"
 set -e
 touch "${BUILD_DIR}/${MARKER}"
 
@@ -150,14 +155,16 @@ for ((i;i<$numdeps;i++)); do
 	retrieveDependency ${dependencies[$i]} "${BUILD_DIR}"
 done
 
-#cd "${BUILD_DIR}"
+cd "${BUILD_DIR}"
 
 buildTarget()
 {
 	echo "Building $1 at $2"
-	EXTRACTCOMMAND=$(getExtractCommand $1)
-	$EXTRACTCOMMAND $1
+	echo "IN" $PWD
+	EXTRACTCOMMAND=$(getExtractCommand ../$1)
+	$EXTRACTCOMMAND ../$1
 	cd $2
+	echo $PWD
 	case $2 in
                 ($CMAKE_DIR)
 			./configure --prefix="${DEV_INSTALL_LOCATION}"
@@ -170,6 +177,11 @@ buildTarget()
 			make -j $(nproc)
 			make install
 			;;
+                ($PGAUDIT_DIR)
+                        echo "PGAUDIT BUILD"
+                        export PGCONFIG=${BUILD_DIR}/install/bin/pg_config
+			make install USE_PGXS=1 PG_CONFIG=$PGCONFIG
+                        ;;
 		($POSTGIS_DIR)
 			echo "POSTGIS BUILD"
 			export LD_LIBRARY_PATH="${BUILD_DIR}/install/lib:${LD_LIBRARY_PATH}"
@@ -201,7 +213,7 @@ buildTarget()
 		#	;;
 		($POSTGRES_DIR)
 			echo "POSTGRES BUILD"
-			./configure --prefix="${BUILD_DIR}/install"
+			./configure --prefix="${BUILD_DIR}/install" --with-openssl
 			make -j $(nproc)
 			make install
 			cd contrib
@@ -215,19 +227,18 @@ buildTarget()
 			;;
 		($SQLITE3_DIR)
 			echo "BUILD SQLITE3, which is now a PROJ4 dependency"
-                        ./configure --prefix="${BUILD_DIR}/install" --disable-tcl
+                        CFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1" ./configure --prefix="${BUILD_DIR}/install" --disable-tcl
                         make -j $(nproc)
                         make install
                         ;;
 		($PROJ_DIR)
+			echo PROJ $PWD
 			echo "BUILDING PROJ4"
-			mkdir build
-			cd build
-			cmake -DSQLITE3_INCLUDE_DIR="${BUILD_DIR}/install/include" -DSQLITE3_LIBRARY="${BUILD_DIR}/install/lib/libsqlite3.so" -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install" ..
+			cmake -DSQLITE3_INCLUDE_DIR="${BUILD_DIR}/install/include" -DSQLITE3_LIBRARY="${BUILD_DIR}/install/lib/libsqlite3.so" -DCMAKE_INSTALL_PREFIX="${BUILD_DIR}/install" .
                         make -j $(nproc)
                         make install
 			# Workaround for GDAL not finding in lib64 on some platforms
-			cp -P ${BUILD_DIR}/install/lib64/libproj.so* ${BUILD_DIR}/install/lib
+			#cp -P ${BUILD_DIR}/install/lib64/libproj.so* ${BUILD_DIR}/install/lib
 			cd ..
                         ;;
 		(*)
@@ -239,15 +250,14 @@ buildTarget()
 	cd ..
 }
 
-buildTarget $CMAKE_FILE $CMAKE_DIR
-buildTarget $SQLITE3_FILE $SQLITE3_DIR
-buildTarget $PROJ_FILE $PROJ_DIR
-buildTarget $GEOS_FILE $GEOS_DIR
-buildTarget $GDAL_FILE $GDAL_DIR
-buildTarget $POSTGRES_FILE $POSTGRES_DIR
-buildTarget $POSTGIS_FILE $POSTGIS_DIR
-#buildTarget $WIDGETS_FILE $WIDGETS_DIR
-#buildTarget $PGADMIN_FILE $PGADMIN_DIR
+#buildTarget $CMAKE_FILE $CMAKE_DIR
+#buildTarget $SQLITE3_FILE $SQLITE3_DIR
+#buildTarget $PROJ_FILE $PROJ_DIR
+#buildTarget $GEOS_FILE $GEOS_DIR
+#buildTarget $GDAL_FILE $GDAL_DIR
+#buildTarget $POSTGRES_FILE $POSTGRES_DIR
+#buildTarget $POSTGIS_FILE $POSTGIS_DIR
+buildTarget $PGAUDIT_FILE $PGAUDIT_DIR
 
 # Copy site specific scripts
 cp "${BUILD_DIR}/${PG_PRIMARY}" "${BUILD_DIR}/install/bin"
