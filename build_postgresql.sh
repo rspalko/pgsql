@@ -100,9 +100,6 @@ if [ ! -e $PGAUDIT_FILE ]; then
 fi
 
 
-#PGDADMIN_FILE=`basename $PGADMIN`
-#WIDGETS_FILE=`basename $WIDGETS`
-
 CMAKE_DIR=$(extractBase $CMAKE_FILE)
 GEOS_DIR=$(extractBase $GEOS_FILE)
 GDAL_DIR=$(extractBase $GDAL_FILE)
@@ -111,8 +108,6 @@ POSTGIS_DIR=$(extractBase $POSTGIS_FILE)
 POSTGRES_DIR=$(extractBase $POSTGRES_FILE)
 SQLITE3_DIR=$(extractBase $SQLITE3_FILE)
 PGAUDIT_DIR=$(extractBase $PGAUDIT_FILE)
-#PGADMIN_DIR=$(extractBase $PGADMIN_FILE)
-#WIDGETS_DIR=$(extractBase $WIDGETS_FILE)
 
 pushd `dirname "$0"` >& /dev/null
 export SWD=$PWD
@@ -142,7 +137,6 @@ export LD_LIBRARY_PATH=$DEV_INSTALL_LOCATION/lib64:$DEV_INSTALL_LOCATION/lib:${B
 export PATH=$DEV_INSTALL_LOCATION/bin:${BUILD_DIR}/install/bin:$PATH
 
 
-#dependencies=($GEOS $GDAL $PROJ $POSTGIS $POSTGRES $PGADMIN $WIDGETS $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
 dependencies=($GEOS_FILE $GDAL_FILE $SQLITE3_FILE $PROJ_FILE $POSTGIS_FILE $POSTGRES_FILE $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
 numdeps=${#dependencies[@]}
 i=0
@@ -191,26 +185,6 @@ buildTarget()
 			make #-j $(nproc)
 			make install
 			;;
-		#($WIDGETS_DIR)
-		#	echo "wxWidgets BUILD"
-		#	./configure --prefix="${BUILD_DIR}/install" --enable-unicode
-		#	make -j $(nproc)
-		#	make install
-		#	cd contrib
-		#	# Saw an issue with parallel make here, so using a single CPU for now
-		#	make
-		#	make install
-		#	cd ..
-		#	;;
-		#($PGADMIN_DIR)
-		#	echo "PGADMIN BUILD"
-		#	./configure --prefix="${BUILD_DIR}/install" --with-wx="${BUILD_DIR}/install"
-		#	# Need to be able to find wxWidgets bins and libs
-		#	export PATH="${BUILD_DIR}/install/bin:$PATH"
-		#	export LD_LIBRARY_PATH="${BUILD_DIR}/install/lib"
-		#	make -j $(nproc)
-		#	make install
-		#	;;
 		($POSTGRES_DIR)
 			echo "POSTGRES BUILD"
 			./configure --prefix="${BUILD_DIR}/install" --with-openssl
@@ -239,7 +213,6 @@ buildTarget()
                         make install
 			# Workaround for GDAL not finding in lib64 on some platforms
 			#cp -P ${BUILD_DIR}/install/lib64/libproj.so* ${BUILD_DIR}/install/lib
-			cd ..
                         ;;
 		(*)
 			./configure --prefix="${BUILD_DIR}/install"
@@ -250,13 +223,13 @@ buildTarget()
 	cd ..
 }
 
-#buildTarget $CMAKE_FILE $CMAKE_DIR
-#buildTarget $SQLITE3_FILE $SQLITE3_DIR
-#buildTarget $PROJ_FILE $PROJ_DIR
-#buildTarget $GEOS_FILE $GEOS_DIR
-#buildTarget $GDAL_FILE $GDAL_DIR
-#buildTarget $POSTGRES_FILE $POSTGRES_DIR
-#buildTarget $POSTGIS_FILE $POSTGIS_DIR
+buildTarget $CMAKE_FILE $CMAKE_DIR
+buildTarget $SQLITE3_FILE $SQLITE3_DIR
+buildTarget $PROJ_FILE $PROJ_DIR
+buildTarget $GEOS_FILE $GEOS_DIR
+buildTarget $GDAL_FILE $GDAL_DIR
+buildTarget $POSTGRES_FILE $POSTGRES_DIR
+buildTarget $POSTGIS_FILE $POSTGIS_DIR
 buildTarget $PGAUDIT_FILE $PGAUDIT_DIR
 
 # Copy site specific scripts
