@@ -7,7 +7,7 @@
 # Exit on error
 set -e
 
-PGVERSION=12.6
+PGVERSION=13.3
 
 source locations.sh
 
@@ -70,6 +70,8 @@ GEOS_FILE=`basename $GEOS`
 GDAL_FILE=`basename $GDAL`
 PROJ_FILE=`basename $PROJ`
 POSTGIS_FILE=`basename $POSTGIS`
+PROTOBUF_FILE=protobuf-3.17.2.tar.gz
+PROTOBUF_C_FILE=protobuf-c-1.4.0.tar.gz
 POSTGRES_FILE=`basename $POSTGRES`
 SQLITE3_FILE=`basename $SQLITE3`
 PGAUDIT_FILE=pgaudit-`basename $PGAUDIT`
@@ -85,6 +87,12 @@ if [ ! -e $GDAL_FILE ]; then
 fi
 if [ ! -e $PROJ_FILE ]; then
         wget $PROJ
+fi
+if [ ! -e $PROTOBUF_FILE ]; then
+        wget -O $PROTOBUF_FILE $PROTOBUF
+fi
+if [ ! -e $PROTOBUF_C_FILE ]; then
+        wget -O $PROTOBUF_C_FILE $PROTOBUF_C
 fi
 if [ ! -e $POSTGIS_FILE ]; then
         wget $POSTGIS
@@ -105,6 +113,8 @@ GEOS_DIR=$(extractBase $GEOS_FILE)
 GDAL_DIR=$(extractBase $GDAL_FILE)
 PROJ_DIR=$(extractBase $PROJ_FILE)
 POSTGIS_DIR=$(extractBase $POSTGIS_FILE)
+PROTOBUF_DIR=$(extractBase $PROTOBUF_FILE)
+PROTOBUF_C_DIR=$(extractBase $PROTOBUF_C_FILE)
 POSTGRES_DIR=$(extractBase $POSTGRES_FILE)
 SQLITE3_DIR=$(extractBase $SQLITE3_FILE)
 PGAUDIT_DIR=$(extractBase $PGAUDIT_FILE)
@@ -137,7 +147,7 @@ export LD_LIBRARY_PATH=$DEV_INSTALL_LOCATION/lib64:$DEV_INSTALL_LOCATION/lib:${B
 export PATH=$DEV_INSTALL_LOCATION/bin:${BUILD_DIR}/install/bin:$PATH
 
 
-dependencies=($GEOS_FILE $GDAL_FILE $SQLITE3_FILE $PROJ_FILE $POSTGIS_FILE $POSTGRES_FILE $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
+dependencies=($GEOS_FILE $GDAL_FILE $SQLITE3_FILE $PROJ_FILE $PROTOBUF_C_FILE $PROTOBUF_FILE $POSTGIS_FILE $POSTGRES_FILE $PG_PRIMARY $PG_STANDBY $DB_SETTINGS $POSTGIS_PDF $SCHEMA $INDICES $PGBACKUP)
 numdeps=${#dependencies[@]}
 i=0
 for ((i;i<$numdeps;i++)); do
@@ -199,6 +209,22 @@ buildTarget()
 			make install
 			cd ..
 			;;
+                ($PROTOBUF_DIR)
+                        echo "PROTOBUF BUILD"
+                        ./autogen.sh
+                        ./configure --prefix="${BUILD_DIR}/install"
+                        make -j $(nproc)
+                        make install
+                        ;;
+		($PROTOBUF_C_DIR)
+			echo "PROTOBUF C BUILD"
+			export PKG_CONFIG_PATH="${BUILD_DIR}/install/lib/pkgconfig"
+			export PROTOC="${BUILD_DIR}/install/bin/protoc"
+			./autogen.sh
+		       	./configure --prefix="${BUILD_DIR}/install" 
+			make -j $(nproc)
+			make install
+			;;
 		($SQLITE3_DIR)
 			echo "BUILD SQLITE3, which is now a PROJ4 dependency"
                         CFLAGS="-DSQLITE_ENABLE_COLUMN_METADATA=1" ./configure --prefix="${BUILD_DIR}/install" --disable-tcl
@@ -229,6 +255,8 @@ buildTarget $PROJ_FILE $PROJ_DIR
 buildTarget $GEOS_FILE $GEOS_DIR
 buildTarget $GDAL_FILE $GDAL_DIR
 buildTarget $POSTGRES_FILE $POSTGRES_DIR
+buildTarget $PROTOBUF_FILE $PROTOBUF_DIR
+buildTarget $PROTOBUF_C_FILE $PROTOBUF_C_DIR
 buildTarget $POSTGIS_FILE $POSTGIS_DIR
 buildTarget $PGAUDIT_FILE $PGAUDIT_DIR
 
